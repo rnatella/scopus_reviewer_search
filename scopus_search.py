@@ -15,6 +15,8 @@ recent_years = 3
 min_recent_papers = 3
 min_h_index = 3
 max_h_index = 20
+max_reviewers = 50
+skip_first_results = -1
 
 
 search_results = []
@@ -30,23 +32,35 @@ if s.results is None:
     exit(1)
 
 
-i = 0
+result_num = 0
 
 for item in s.results:
-    i = i+1
 
-
-    if i == 100:
+    if max_reviewers != -1 and len(search_results) == max_reviewers:
+        print("\nMax number of reviewers found ({}), exiting".format(max_reviewers))
         break
 
 
+    result_num = result_num+1
+
+    if skip_first_results != -1 and result_num <= skip_first_results:
+        print("Skipping result {}".format(result_num))
+        continue
+
+    print("")
+    print("--- Result no.: {} ---".format(result_num))
+
+
+
     if item.title is None:
+        print("No title found, skipping")
         continue
 
     paper = item.title
 
 
     if item.author_ids is None:
+        print("No author IDs found, skipping")
         continue
 
     author_ids = item.author_ids.split(';')
@@ -57,6 +71,7 @@ for item in s.results:
         #indexed_name = au.indexed_name
 
         if au.given_name is None or au.surname is None:
+            print("No author name and surname found, skipping")
             continue
 
         name = au.given_name
@@ -64,18 +79,20 @@ for item in s.results:
 
         if au.name_variants is not None:
             for name_var in au.name_variants:
-                if len(name) < len(name_var.given_name):
+                if name_var.given_name is not None and len(name) < len(name_var.given_name):
                     name = name_var.given_name
                 
-                if len(surname) < len(name_var.surname):
+                if name_var.surname is not None and len(surname) < len(name_var.surname):
                     surname = name_var.surname
 
+        print("")
         print("Name: {}".format(name))
         print("Surname: {}".format(surname))
 
 
 
         if au.h_index is None:
+            print("No h-index found, skipping")
             continue
 
         h_index = au.h_index
@@ -85,6 +102,7 @@ for item in s.results:
         print("Self-link: "+au.self_link)
 
         if int(h_index) < min_h_index or int(h_index) > max_h_index:
+            print("H-index out of range, skipping")
             continue
 
 
@@ -96,6 +114,7 @@ for item in s.results:
 
 
         if recent_docs < min_recent_papers:
+            print("Recent docs out of range, skipping")
             continue
 
 
@@ -132,6 +151,7 @@ for item in s.results:
         result["Recent paper"] = paper
 
         search_results.append(result)
+
         
 
 
