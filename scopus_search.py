@@ -1,12 +1,15 @@
-from re import search
 from pybliometrics.scopus import ScopusSearch
 from pybliometrics.scopus import AuthorRetrieval
 from pybliometrics.scopus import ContentAffiliationRetrieval
 
+import json
+import re
+import argparse
+
 import sys
 import xlsxwriter
 
-from email_finder import email_finder
+#from email_finder import email_finder
 
 
 
@@ -19,24 +22,60 @@ max_reviewers = 50
 skip_first_results = -1
 
 
-search_results = []
 
-if len(sys.argv) < 2:
-    print("Error: {} <search AND/OR-separated strings>".format(sys.argv[0]))
-    exit(1)
+parser = argparse.ArgumentParser()
+group = parser.add_mutually_exclusive_group()
+group.add_argument("-k", "--keywords", help="keywords (AND/OR separated) to search in paper title, abstract, keywords")
+group.add_argument("-r", "--references", help="JSON file with list of references (from anystyle)")
 
-s = ScopusSearch('TITLE-ABS-KEY ( {} ) '.format(sys.argv[1]))
+args = parser.parse_args()
 
-if s.results is None:
-    print("No results found for: {}".format(sys.argv[1]))
-    exit(1)
 
+reviewer_results = []
+scopus_results = []
+
+if args.keywords:
+
+    s = ScopusSearch('TITLE-ABS-KEY ( {} ) '.format(sys.argv[1]))
+
+    if s.results is None:
+        print("No results found for: {}".format(sys.argv[1]))
+        exit(1)
+
+    scopus_results = s.results
+
+elif args.references:
+    with open('references.json') as f:
+
+        data = json.load(f)
+
+        for paper in data:
+
+            if 'date' in paper and 'title' in paper:
+
+                year = int(paper['date'][0])
+
+                if year >= 2017:
+
+                    title = paper['title'][-1]
+
+                    title = re.sub(r'\s\d+\s', ' ', title)
+
+                    print("Reference found: " + title)
+
+                    s = ScopusSearch('TITLE ( {} ) '.format(title))
+
+                    scopus_results.extend(s.results)
+
+else:
+    parser.print_help()
+    sys.exit(0)
 
 result_num = 0
 
-for item in s.results:
+for item in scopus_results:
 
-    if max_reviewers != -1 and len(search_results) == max_reviewers:
+    if max_reviewers != -1 and len(reviewer_results) == max_reviewers:
         print("\nMax number of reviewers found ({}), exiting".format(max_reviewers))
         break
 
@@ -150,7 +189,7 @@ for item in s.results:
         result["Recent docs"] = recent_docs
         result["Recent paper"] = paper
 
-        search_results.append(result)
+        reviewer_results.append(result)
 
         
 
@@ -169,7 +208,7 @@ for key in keys:
 
 row = 1
 
-for result in search_results:
+for result in reviewer_results:
 
     col = 0
 
