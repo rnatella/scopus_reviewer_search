@@ -1,2 +1,3 @@
 .vscode/settings.json
-scopus_results.xlsx
+scopus_results*.xlsx
+references.json
