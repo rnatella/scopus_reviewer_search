@@ -36,16 +36,17 @@ scopus_results = []
 
 if args.keywords:
 
-    s = ScopusSearch('TITLE-ABS-KEY ( {} ) '.format(sys.argv[1]))
+    s = ScopusSearch('TITLE-ABS-KEY ( {} ) '.format(args.keywords))
 
     if s.results is None:
-        print("No results found for: {}".format(sys.argv[1]))
+        print("No results found for: {}".format(args.keywords))
         exit(1)
 
     scopus_results = s.results
 
 elif args.references:
-    with open('references.json') as f:
+
+    with open(args.references) as f:
 
         data = json.load(f)
 
@@ -55,7 +56,7 @@ elif args.references:
 
                 year = int(paper['date'][0])
 
-                if year >= 2017:
+                if year >= (cur_year - recent_years):
 
                     title = paper['title'][-1]
 
@@ -64,8 +65,11 @@ elif args.references:
                     print("Reference found: " + title)
 
                     s = ScopusSearch('TITLE ( {} ) '.format(title))
-
-                    scopus_results.extend(s.results)
+                    
+                    try:
+                        scopus_results.extend(s.results)
+                    except:
+                        pass
 
 else:
     parser.print_help()
@@ -73,7 +77,7 @@ else:
 
 result_num = 0
 
-for item in scopus_results:
+for scopus_paper in scopus_results:
 
     if max_reviewers != -1 and len(reviewer_results) == max_reviewers:
         print("\nMax number of reviewers found ({}), exiting".format(max_reviewers))
@@ -91,18 +95,18 @@ for item in scopus_results:
 
 
 
-    if item.title is None:
+    if scopus_paper.title is None:
         print("No title found, skipping")
         continue
 
-    paper = item.title
+    paper = scopus_paper.title
 
 
-    if item.author_ids is None:
+    if scopus_paper.author_ids is None:
         print("No author IDs found, skipping")
         continue
 
-    author_ids = item.author_ids.split(';')
+    author_ids = scopus_paper.author_ids.split(';')
 
     for auid in author_ids:
         au = AuthorRetrieval(auid)
