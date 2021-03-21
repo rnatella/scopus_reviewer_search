@@ -9,17 +9,9 @@ import argparse
 import sys
 import xlsxwriter
 
+from datetime import date
+
 #from email_finder import email_finder
-
-
-
-cur_year = 2020
-recent_years = 3
-min_recent_papers = 3
-min_h_index = 3
-max_h_index = 20
-max_reviewers = 30
-skip_first_results = -1
 
 
 
@@ -28,6 +20,12 @@ group = parser.add_mutually_exclusive_group()
 group.add_argument("-k", "--keywords", help="keywords (AND/OR separated) to search in paper title, abstract, keywords")
 group.add_argument("-j", "--references-json", help="JSON file with list of references (from anystyle)")
 group.add_argument("-t", "--references-txt", help="TXT file with list of references (plain title)")
+parser.add_argument('--recent-years', default=4, type=int, help="How many years ago the author should have published some papers")
+parser.add_argument('--min-recent-papers', default=3, type=int, help="How many papers the author should have been published in recent years")
+parser.add_argument('--min-h-index', default=3, type=int, help="The H-index of the author should be higher than a minimum")
+parser.add_argument('--max-h-index', default=20, type=int, help="The H-index of the author should be lower than a maximum")
+parser.add_argument('--max-reviewers', default=30, type=int, help="How many reviewers to search for")
+parser.add_argument('--skip-first-results', default=-1, type=int, help="How many results from the Scopus query should be skipped")
 
 args = parser.parse_args()
 
@@ -80,7 +78,7 @@ elif args.references_json:
 
                 year = int(paper['date'][0])
 
-                if year >= (cur_year - recent_years):
+                if year >= (date.today().year - args.recent_years):
 
                     title = paper['title'][-1]
 
@@ -103,14 +101,14 @@ result_num = 0
 
 for scopus_paper in scopus_results:
 
-    if max_reviewers != -1 and len(reviewer_results) >= max_reviewers:
-        print("\nMax number of reviewers found ({}), exiting".format(max_reviewers))
+    if args.max_reviewers != -1 and len(reviewer_results) >= args.max_reviewers:
+        print("\nMax number of reviewers found ({}), exiting".format(len(reviewer_results)))
         break
 
 
     result_num = result_num+1
 
-    if skip_first_results != -1 and result_num <= skip_first_results:
+    if args.skip_first_results != -1 and result_num <= args.skip_first_results:
         print("Skipping result {}".format(result_num))
         continue
 
@@ -169,19 +167,19 @@ for scopus_paper in scopus_results:
         print("H-index: "+au.h_index)
         print("Self-link: "+au.self_link)
 
-        if int(h_index) < min_h_index or int(h_index) > max_h_index:
+        if int(h_index) < args.min_h_index or int(h_index) > args.max_h_index:
             print("H-index out of range, skipping")
             continue
 
 
-        docs = ScopusSearch('AU-ID({}) AND PUBYEAR > {}'.format(auid, cur_year - recent_years), download=False)
+        docs = ScopusSearch('AU-ID({}) AND PUBYEAR > {}'.format(auid, date.today().year - args.recent_years), download=False)
 
         recent_docs = docs.get_results_size()
 
         print("Recent docs: {}".format(recent_docs))
 
 
-        if recent_docs < min_recent_papers:
+        if recent_docs < args.min_recent_papers:
             print("Recent docs out of range, skipping")
             continue
 
