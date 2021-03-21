@@ -163,6 +163,7 @@ for scopus_paper in scopus_results:
             continue
 
         h_index = au.h_index
+        au_id = au.eid
         au_link = au.self_link
 
         print("H-index: "+au.h_index)
@@ -211,11 +212,13 @@ for scopus_paper in scopus_results:
         result["Name"] = name
         result["Surname"] = surname
         result["H-index"] = h_index
-        result["Author Link"] = au_link
+        result["Author page"] = au_id
+        result["Author page link"] = au_link
         result["Domain"] = domain
         #result["Email"] = email
         result["Recent docs"] = recent_docs
         result["Recent paper"] = paper
+        result["Recent paper link"] = 'https://www.scopus.com/record/display.uri?origin=resultslist&eid='+scopus_paper.eid
 
         reviewer_results.append(result)
 
@@ -228,7 +231,7 @@ worksheet = workbook.add_worksheet()
 row = 0
 col = 0
 
-keys = ("Name", "Surname", "H-index", "Author Link", "Domain", "Recent docs", "Recent paper")
+keys = ("Name", "Surname", "H-index", "Author page", "Domain", "Recent docs", "Recent paper")
 
 for key in keys:
     worksheet.write(row, col, key)
@@ -241,7 +244,15 @@ for result in reviewer_results:
     col = 0
 
     for key in keys:
-        worksheet.write(row, col, result[key])
+
+        if key+" link" in result:
+
+            worksheet.write_url(row, col, result[key+" link"], string=result[key])
+
+        else:
+
+            worksheet.write(row, col, result[key])
+
         col = col + 1
     
     row = row + 1
