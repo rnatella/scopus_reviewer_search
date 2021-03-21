@@ -18,5 +18,9 @@ python3 scopus_search.py -k "fault injection"
 sudo gem install anystyle-cli
 anystyle find file.pdf > references.json
 
-python3 scopus_search.py -r references.json
+python3 scopus_search.py -j references.json
 ```
+
+# Reviewer search by references (TXT format, plain titles)
+
+python3 scopus_search.py -t references.txt

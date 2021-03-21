@@ -18,7 +18,7 @@ recent_years = 3
 min_recent_papers = 3
 min_h_index = 3
 max_h_index = 20
-max_reviewers = 50
+max_reviewers = 30
 skip_first_results = -1
 
 
@@ -26,7 +26,8 @@ skip_first_results = -1
 parser = argparse.ArgumentParser()
 group = parser.add_mutually_exclusive_group()
 group.add_argument("-k", "--keywords", help="keywords (AND/OR separated) to search in paper title, abstract, keywords")
-group.add_argument("-r", "--references", help="JSON file with list of references (from anystyle)")
+group.add_argument("-j", "--references-json", help="JSON file with list of references (from anystyle)")
+group.add_argument("-t", "--references-txt", help="TXT file with list of references (plain title)")
 
 args = parser.parse_args()
 
@@ -36,6 +37,8 @@ scopus_results = []
 
 if args.keywords:
 
+    print("Seaching on Scopus: {}".format(args.keywords))
+
     s = ScopusSearch('TITLE-ABS-KEY ( {} ) '.format(args.keywords))
 
     if s.results is None:
@@ -44,9 +47,30 @@ if args.keywords:
 
     scopus_results = s.results
 
-elif args.references:
+elif args.references_txt:
 
-    with open(args.references) as f:
+    with open(args.references_txt) as f:
+
+        refs = f.readlines()
+
+        for ref in refs:
+
+            print("Seaching on Scopus: {}".format(ref))
+
+            s = ScopusSearch('TITLE-ABS-KEY ( {} ) '.format(ref))
+
+            try:
+                if s.results == 0:
+                    print("No results found for: {}".format(ref))
+                    continue
+
+                scopus_results.extend(s.results)
+            except TypeError:
+                pass
+
+elif args.references_json:
+
+    with open(args.references_json) as f:
 
         data = json.load(f)
 
@@ -79,7 +103,7 @@ result_num = 0
 
 for scopus_paper in scopus_results:
 
-    if max_reviewers != -1 and len(reviewer_results) == max_reviewers:
+    if max_reviewers != -1 and len(reviewer_results) >= max_reviewers:
         print("\nMax number of reviewers found ({}), exiting".format(max_reviewers))
         break
 
