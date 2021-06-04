@@ -53,13 +53,15 @@ elif args.references_txt:
 
         for ref in refs:
 
-            print("Seaching on Scopus: {}".format(ref))
+            query = re.sub("[^a-zA-Z0-9-\s]+", "", ref)
 
-            s = ScopusSearch('TITLE-ABS-KEY ( {} ) '.format(ref))
+            print("Seaching on Scopus: {}".format(query))
+
+            s = ScopusSearch('TITLE-ABS-KEY ( {} ) '.format(query))
 
             try:
                 if s.results == 0:
-                    print("No results found for: {}".format(ref))
+                    print("No results found for: {}".format(query))
                     continue
 
                 scopus_results.extend(s.results)
