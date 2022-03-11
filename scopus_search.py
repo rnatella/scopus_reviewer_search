@@ -20,24 +20,39 @@ group = parser.add_mutually_exclusive_group()
 group.add_argument("-k", "--keywords", help="keywords (AND/OR separated) to search in paper title, abstract, keywords")
 group.add_argument("-j", "--references-json", help="JSON file with list of references (from anystyle)")
 group.add_argument("-t", "--references-txt", help="TXT file with list of references (plain title)")
-parser.add_argument('--recent-years', default=4, type=int, help="How many years ago the author should have published some papers")
+parser.add_argument('--min-recent-years', default=4, type=int, help="How many years ago the author should have published some papers")
 parser.add_argument('--min-recent-papers', default=3, type=int, help="How many papers the author should have been published in recent years")
 parser.add_argument('--min-h-index', default=3, type=int, help="The H-index of the author should be higher than a minimum")
 parser.add_argument('--max-h-index', default=20, type=int, help="The H-index of the author should be lower than a maximum")
 parser.add_argument('--max-reviewers', default=30, type=int, help="How many reviewers to search for")
 parser.add_argument('--skip-first-results', default=-1, type=int, help="How many results from the Scopus query should be skipped")
+parser.add_argument('--query-years', default=5, type=int, help="How many years ago the query should look in the past")
+parser.add_argument('--journal-only', action=argparse.BooleanOptionalAction, default=True, help="Query should only look for journal papers")
+parser.add_argument('--cs-only', action=argparse.BooleanOptionalAction, default=True, help="Query should only look for Computer Science papers")
 
 args = parser.parse_args()
 
-
 reviewer_results = []
 scopus_results = []
+
+
+query_options = ""
+
+if args.query_years > 0:
+    query_options += ' AND PUBYEAR AFT {}'.format(date.today().year - args.query_years)
+
+if args.journal_only is True:
+    query_options += ' AND SRCTYPE(j)'
+
+if args.cs_only is True:
+    query_options += ' AND SUBJAREA(COMP)'
+
 
 if args.keywords:
 
     print("Seaching on Scopus: {}".format(args.keywords))
 
-    s = ScopusSearch('TITLE-ABS-KEY ( {} ) '.format(args.keywords))
+    s = ScopusSearch('TITLE-ABS-KEY ( {} ) {}'.format(args.keywords, query_options), verbose=True)
 
     if s.results is None:
         print("No results found for: {}".format(args.keywords))
@@ -57,7 +72,7 @@ elif args.references_txt:
 
             print("Seaching on Scopus: {}".format(query))
 
-            s = ScopusSearch('TITLE-ABS-KEY ( {} ) '.format(query))
+            s = ScopusSearch('TITLE-ABS-KEY ( {} ) {}'.format(query, query_options), verbose=True)
 
             try:
                 if s.results == 0:
@@ -80,7 +95,7 @@ elif args.references_json:
 
                 year = int(paper['date'][0])
 
-                if year >= (date.today().year - args.recent_years):
+                if year >= (date.today().year - args.min_recent_years):
 
                     title = paper['title'][-1]
 
@@ -89,7 +104,7 @@ elif args.references_json:
                     print("Reference found: " + title)
 
                     s = ScopusSearch('TITLE ( {} ) '.format(title))
-                    
+
                     try:
                         scopus_results.extend(s.results)
                     except:
@@ -148,7 +163,7 @@ for scopus_paper in scopus_results:
             for name_var in au.name_variants:
                 if name_var.given_name is not None and len(name) < len(name_var.given_name):
                     name = name_var.given_name
-                
+
                 if name_var.surname is not None and len(surname) < len(name_var.surname):
                     surname = name_var.surname
 
@@ -174,7 +189,7 @@ for scopus_paper in scopus_results:
             continue
 
 
-        docs = ScopusSearch('AU-ID({}) AND PUBYEAR > {}'.format(auid, date.today().year - args.recent_years), download=False)
+        docs = ScopusSearch('AU-ID({}) AND PUBYEAR > {}'.format(auid, date.today().year - args.min_recent_years), download=False)
 
         recent_docs = docs.get_results_size()
 
@@ -222,7 +237,7 @@ for scopus_paper in scopus_results:
 
         reviewer_results.append(result)
 
-        
+
 
 
 workbook = xlsxwriter.Workbook('scopus_results.xlsx')
@@ -254,8 +269,8 @@ for result in reviewer_results:
             worksheet.write(row, col, result[key])
 
         col = col + 1
-    
+
     row = row + 1
 
 workbook.close()
-    
+
