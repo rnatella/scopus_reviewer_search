@@ -1,6 +1,7 @@
 from pybliometrics.scopus import ScopusSearch
 from pybliometrics.scopus import AuthorRetrieval
 from pybliometrics.scopus import ContentAffiliationRetrieval
+from pybliometrics.scopus.exception import Scopus404Error
 
 import json
 import re
@@ -205,9 +206,11 @@ for scopus_paper in scopus_results:
         j = 0
 
         while domain is None and j < len(au.affiliation_current):
-            affiliation = ContentAffiliationRetrieval(au.affiliation_current[j].id)
-
-            domain = affiliation.org_domain
+            try:
+                affiliation = ContentAffiliationRetrieval(au.affiliation_current[j].id)
+                domain = affiliation.org_domain
+            except Scopus404Error:
+                pass
 
             j = j+1
 
