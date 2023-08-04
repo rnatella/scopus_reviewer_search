@@ -25,7 +25,7 @@ parser.add_argument('--min-recent-years', default=4, type=int, help="How many ye
 parser.add_argument('--min-recent-papers', default=3, type=int, help="How many papers the author should have been published in recent years")
 parser.add_argument('--min-h-index', default=3, type=int, help="The H-index of the author should be higher than a minimum")
 parser.add_argument('--max-h-index', default=20, type=int, help="The H-index of the author should be lower than a maximum")
-parser.add_argument('--max-reviewers', default=30, type=int, help="How many reviewers to search for")
+parser.add_argument('--max-reviewers', default=50, type=int, help="How many reviewers to search for")
 parser.add_argument('--skip-first-results', default=-1, type=int, help="How many results from the Scopus query should be skipped")
 parser.add_argument('--query-years', default=5, type=int, help="How many years ago the query should look in the past")
 parser.add_argument('--journal-only', action=argparse.BooleanOptionalAction, default=True, help="Query should only look for journal papers")
@@ -149,7 +149,13 @@ for scopus_paper in scopus_results:
     author_ids = scopus_paper.author_ids.split(';')
 
     for auid in author_ids:
-        au = AuthorRetrieval(auid)
+        au = None
+
+        try:
+            au = AuthorRetrieval(auid)
+        except:
+            print("Author could not be retrieved, skipping")
+            continue
 
         #indexed_name = au.indexed_name
 
