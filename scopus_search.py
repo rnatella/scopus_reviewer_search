@@ -29,6 +29,7 @@ parser.add_argument('--max-reviewers', default=50, type=int, help="How many revi
 parser.add_argument('--skip-first-results', default=-1, type=int, help="How many results from the Scopus query should be skipped")
 parser.add_argument('--query-years', default=5, type=int, help="How many years ago the query should look in the past")
 parser.add_argument('--journal-only', action=argparse.BooleanOptionalAction, default=True, help="Query should only look for journal papers")
+parser.add_argument('--publisher', help="Query should look for journal publishers")
 parser.add_argument('--cs-only', action=argparse.BooleanOptionalAction, default=True, help="Query should only look for Computer Science papers")
 
 args = parser.parse_args()
@@ -48,6 +49,10 @@ if args.journal_only is True:
 if args.cs_only is True:
     query_options += ' AND SUBJAREA(COMP)'
 
+if args.publisher is not None:
+    query_options += ' AND ('
+    query_options += " OR ".join(['PUBLISHER({})'.format(publisher) for publisher in args.publisher.split(',')])
+    query_options += ')'
 
 if args.keywords:
 
