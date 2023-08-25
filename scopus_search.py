@@ -29,8 +29,9 @@ parser.add_argument('--max-reviewers', default=50, type=int, help="How many revi
 parser.add_argument('--skip-first-results', default=-1, type=int, help="How many results from the Scopus query should be skipped")
 parser.add_argument('--query-years', default=5, type=int, help="How many years ago the query should look in the past")
 parser.add_argument('--journal-only', action=argparse.BooleanOptionalAction, default=True, help="Query should only look for journal papers")
-parser.add_argument('--publisher', help="Query should look for journal publishers")
+parser.add_argument('--publisher', help="Publishers to be considered (comma separated)")
 parser.add_argument('--cs-only', action=argparse.BooleanOptionalAction, default=True, help="Query should only look for Computer Science papers")
+parser.add_argument('--conflicts', help="Affiliations to be excluded from the results (comma separated)")
 
 args = parser.parse_args()
 
@@ -119,6 +120,14 @@ elif args.references_json:
 else:
     parser.print_help()
     sys.exit(0)
+
+
+conflicts = []
+
+if args.conflicts is not None:
+    conflicts = args.conflicts.split(',')
+    scopus_results = [paper for paper in scopus_results if (paper.affilname is not None) and not any(conflict.lower() in paper.affilname.lower() for conflict in conflicts)]
+
 
 result_num = 0
 
@@ -214,12 +223,14 @@ for scopus_paper in scopus_results:
 
 
         domain = None
+        affiliation_name = None
         j = 0
 
         while domain is None and j < len(au.affiliation_current):
             try:
                 affiliation = ContentAffiliationRetrieval(au.affiliation_current[j].id)
                 domain = affiliation.org_domain
+                affiliation_name = affiliation.affiliation_name
             except Scopus404Error:
                 pass
 
@@ -244,6 +255,7 @@ for scopus_paper in scopus_results:
         result["Author page"] = au_id
         result["Author page link"] = au_link
         result["Domain"] = domain
+        result["Affiliation"] = affiliation_name
         #result["Email"] = email
         result["Recent docs"] = recent_docs
         result["Recent paper"] = paper
