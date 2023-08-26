@@ -23,4 +23,13 @@ python3 scopus_search.py -j references.json
 
 # Reviewer search by references (TXT format, plain titles)
 
+```
 python3 scopus_search.py -t references.txt
+```
+
+# Reviewer search by filtering publishers, by excluding conflits, and by looking-up email addresses
+
+```
+python3 scopus_search.py --publisher "mdpi,hindawi" --email-lookup --conflits "shanghai" -k "computer vision"
+```
+

@@ -1,6 +1,6 @@
 from pybliometrics.scopus import ScopusSearch
 from pybliometrics.scopus import AuthorRetrieval
-from pybliometrics.scopus import ContentAffiliationRetrieval
+from pybliometrics.scopus import AffiliationRetrieval
 from pybliometrics.scopus.exception import Scopus404Error
 
 import json
@@ -12,7 +12,12 @@ import xlsxwriter
 
 from datetime import date
 
-#from email_finder import email_finder
+from bs4 import BeautifulSoup
+import requests
+
+from email_scraper import scrape_emails
+
+
 
 
 
@@ -32,8 +37,52 @@ parser.add_argument('--journal-only', action=argparse.BooleanOptionalAction, def
 parser.add_argument('--publisher', help="Publishers to be considered (comma separated)")
 parser.add_argument('--cs-only', action=argparse.BooleanOptionalAction, default=True, help="Query should only look for Computer Science papers")
 parser.add_argument('--conflicts', help="Affiliations to be excluded from the results (comma separated)")
+parser.add_argument('-e', '--email-lookup', action=argparse.BooleanOptionalAction, default=True, help="Look-up for email addresses (requires Chrome running with remote debugging, and logged into Scopus)")
+
 
 args = parser.parse_args()
+
+
+
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+
+browser = None
+
+if args.email_lookup is True:
+    
+    opt = Options()
+    opt.add_experimental_option("debuggerAddress", "localhost:8989")
+
+    try:
+        browser = webdriver.Chrome(options=opt)
+        browser.set_page_load_timeout(30)
+
+    except:
+        print("Unable to connect to Chrome with remote debugging, email lookup will not work")
+        print("Run Chrome with remote debugging and try again, e.g.\n\n")
+        print("/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=8989\n\n")
+        exit(1)
+
+    # Check if logged-in
+
+    browser.get('https://www.scopus.com/')
+    page = browser.page_source
+
+    soup = BeautifulSoup(page, "lxml")
+
+    email = None
+
+    for x in soup.findAll('script'):
+        match = re.search(r'ScopusUser\s*=\s*{(.*?)};\s*\n', str(x), flags=re.DOTALL)
+
+        if not match is None:
+            email = re.search(r'email:\s"(.*)"', str(match[1]))[1]
+
+    if email is None or email == "":
+        print("Chrome browser session must be logged-in into Scopus, email lookup will not work")
+        exit(1)
+
 
 reviewer_results = []
 scopus_results = []
@@ -162,7 +211,44 @@ for scopus_paper in scopus_results:
 
     author_ids = scopus_paper.author_ids.split(';')
 
-    for auid in author_ids:
+    author_names = scopus_paper.author_names.split(';')
+
+
+
+    paper_link = 'https://www.scopus.com/record/display.uri?origin=resultslist&eid='+scopus_paper.eid
+
+
+    author_emails = []
+
+    if args.email_lookup is True:
+
+        browser.get(paper_link)
+        page = browser.page_source
+
+        soup = BeautifulSoup(page, "lxml")
+
+        author_list_tag = soup.find("div", {"data-testid": "author-list"})
+
+        if author_list_tag is not None:
+
+            for author_item in author_list_tag.findAll("li"):
+
+                scraped = scrape_emails(str(author_item))
+
+                if scraped is not None and len(scraped) > 0:
+                    author_emails.append(list(scraped)[0])
+                else:
+                    author_emails.append("")
+
+        else:
+            author_emails = [''] * len(author_ids)
+
+
+
+    for author_idx in range(len(author_ids)):
+
+        auid = author_ids[author_idx]
+
         au = None
 
         try:
@@ -202,7 +288,7 @@ for scopus_paper in scopus_results:
         au_id = au.eid
         au_link = au.self_link
 
-        print("H-index: "+au.h_index)
+        print("H-index: "+str(au.h_index))
         print("Self-link: "+au.self_link)
 
         if int(h_index) < args.min_h_index or int(h_index) > args.max_h_index:
@@ -228,7 +314,7 @@ for scopus_paper in scopus_results:
 
         while domain is None and j < len(au.affiliation_current):
             try:
-                affiliation = ContentAffiliationRetrieval(au.affiliation_current[j].id)
+                affiliation = AffiliationRetrieval(au.affiliation_current[j].id)
                 domain = affiliation.org_domain
                 affiliation_name = affiliation.affiliation_name
             except Scopus404Error:
@@ -239,12 +325,9 @@ for scopus_paper in scopus_results:
         print("Domain: "+str(domain))
 
 
+        email = author_emails[author_idx]
 
-        #email = ""
-
-        #if name is not None and surname is not None and domain is not None:
-        #    email = email_finder(name, surname, domain)
-        #    print("Email: {}".format(email))
+        print("Email: "+email)
 
 
         result = {}
@@ -256,10 +339,10 @@ for scopus_paper in scopus_results:
         result["Author page link"] = au_link
         result["Domain"] = domain
         result["Affiliation"] = affiliation_name
-        #result["Email"] = email
+        result["Email"] = email
         result["Recent docs"] = recent_docs
         result["Recent paper"] = paper
-        result["Recent paper link"] = 'https://www.scopus.com/record/display.uri?origin=resultslist&eid='+scopus_paper.eid
+        result["Recent paper link"] = paper_link
 
         reviewer_results.append(result)
 
@@ -272,7 +355,7 @@ worksheet = workbook.add_worksheet()
 row = 0
 col = 0
 
-keys = ("Name", "Surname", "H-index", "Author page", "Domain", "Recent docs", "Recent paper")
+keys = ("Name", "Surname", "Email", "H-index", "Author page", "Domain", "Recent docs", "Recent paper")
 
 for key in keys:
     worksheet.write(row, col, key)
