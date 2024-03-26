@@ -50,7 +50,7 @@ from selenium.webdriver.chrome.options import Options
 browser = None
 
 if args.email_lookup is True:
-    
+
     opt = Options()
     opt.add_experimental_option("debuggerAddress", "localhost:8989")
 
@@ -59,9 +59,9 @@ if args.email_lookup is True:
         browser.set_page_load_timeout(30)
 
     except:
-        print("Unable to connect to Chrome with remote debugging, email lookup will not work")
-        print("Run Chrome with remote debugging and try again, e.g.\n\n")
-        print("/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=8989\n\n")
+        print("Unable to connect to Chrome with remote debugging. Email lookup will not work.\n")
+        print("Run Chrome with remote debugging and logged-in into Scopus, then try again.\n\n")
+        print("/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=8989  www.scopus.com\n\n")
         exit(1)
 
     # Check if logged-in
@@ -296,6 +296,19 @@ for scopus_paper in scopus_results:
             continue
 
 
+
+        email = author_emails[author_idx]
+
+        if args.email_lookup is True and email == '':
+            print("No email found, skipping")
+            continue
+
+        print("Email: "+email)
+
+
+
+
+
         docs = ScopusSearch('AU-ID({}) AND PUBYEAR > {}'.format(auid, date.today().year - args.min_recent_years), download=False)
 
         recent_docs = docs.get_results_size()
@@ -325,9 +338,6 @@ for scopus_paper in scopus_results:
         print("Domain: "+str(domain))
 
 
-        email = author_emails[author_idx]
-
-        print("Email: "+email)
 
 
         result = {}
