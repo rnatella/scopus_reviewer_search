@@ -46,6 +46,7 @@ args = parser.parse_args()
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium_stealth import stealth
 
 browser = None
 
@@ -57,6 +58,15 @@ if args.email_lookup is True:
     try:
         browser = webdriver.Chrome(options=opt)
         browser.set_page_load_timeout(30)
+
+        stealth(browser,
+            languages=["en-US", "en"],
+            vendor="Google Inc.",
+            platform="Win32",
+            webgl_vendor="Intel Inc.",
+            renderer="Intel Iris OpenGL Engine",
+            fix_hairline=True,
+        )
 
     except:
         print("Unable to connect to Chrome with remote debugging. Email lookup will not work.\n")
