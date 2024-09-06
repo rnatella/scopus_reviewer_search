@@ -56,6 +56,7 @@ if args.email_lookup is True:
     opt.add_experimental_option("debuggerAddress", "localhost:8989")
 
     try:
+        print("Connecting to Chrome...")
         browser = webdriver.Chrome(options=opt)
         browser.set_page_load_timeout(30)
 
@@ -69,6 +70,7 @@ if args.email_lookup is True:
         )
 
     except:
+        print("\n")
         print("Unable to connect to Chrome with remote debugging. Email lookup will not work.\n")
         print("Run Chrome with remote debugging and logged-in into Scopus, then try again.\n\n")
         print("/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=8989  www.scopus.com\n\n")
@@ -134,7 +136,7 @@ elif args.references_txt:
 
         for ref in refs:
 
-            query = re.sub("[^a-zA-Z0-9-\s]+", "", ref)
+            query = re.sub(r"[^a-zA-Z0-9-\s]+", "", ref)
 
             print("Seaching on Scopus: {}".format(query))
 
@@ -365,6 +367,8 @@ for scopus_paper in scopus_results:
         result["Recent paper link"] = paper_link
 
         reviewer_results.append(result)
+
+        print(f"Adding author: {surname}, {name}")
 
 
 
