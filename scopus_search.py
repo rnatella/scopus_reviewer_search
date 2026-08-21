@@ -17,6 +17,7 @@ import requests
 
 from email_scraper import scrape_emails
 
+import chromedriver_binary
 
 
 
@@ -48,12 +49,18 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium_stealth import stealth
 
+import time
+
+
 browser = None
 
 if args.email_lookup is True:
 
     opt = Options()
-    opt.add_experimental_option("debuggerAddress", "localhost:8989")
+    #opt.add_experimental_option("debuggerAddress", "localhost:8989")
+    #opt.add_argument('--user-data-dir=./ChromeData')
+    #opt.add_argument('--verbose')
+    #opt.add_argument('--log-path=/Users/rnatella/git/scopus_reviewer_search/chromedriver.log')
 
     try:
         print("Connecting to Chrome...")
@@ -69,30 +76,12 @@ if args.email_lookup is True:
             fix_hairline=True,
         )
 
-    except:
+    except Exception as e:
+        print(e)
         print("\n")
         print("Unable to connect to Chrome with remote debugging. Email lookup will not work.\n")
         print("Run Chrome with remote debugging and logged-in into Scopus, then try again.\n\n")
         print("/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=8989  www.scopus.com\n\n")
-        exit(1)
-
-    # Check if logged-in
-
-    browser.get('https://www.scopus.com/')
-    page = browser.page_source
-
-    soup = BeautifulSoup(page, "lxml")
-
-    email = None
-
-    for x in soup.findAll('script'):
-        match = re.search(r'ScopusUser\s*=\s*{(.*?)};\s*\n', str(x), flags=re.DOTALL)
-
-        if not match is None:
-            email = re.search(r'email:\s"(.*)"', str(match[1]))[1]
-
-    if email is None or email == "":
-        print("Chrome browser session must be logged-in into Scopus, email lookup will not work")
         exit(1)
 
 
@@ -237,9 +226,14 @@ for scopus_paper in scopus_results:
         browser.get(paper_link)
         page = browser.page_source
 
+        # for obfuscation
+        # https://stackoverflow.com/questions/22739514/how-to-get-html-with-javascript-rendered-sourcecode-by-using-selenium
+        time.sleep(2)
+        page = browser.execute_script("return document.getElementsByTagName('html')[0].innerHTML")
+
         soup = BeautifulSoup(page, "lxml")
 
-        author_list_tag = soup.find("div", {"data-testid": "author-list"})
+        author_list_tag = soup.find("ul", {"data-testid": "authors-list"})
 
         if author_list_tag is not None:
 
@@ -254,8 +248,6 @@ for scopus_paper in scopus_results:
 
         else:
             author_emails = [''] * len(author_ids)
-
-
 
     for author_idx in range(len(author_ids)):
 
@@ -308,8 +300,9 @@ for scopus_paper in scopus_results:
             continue
 
 
-
-        email = author_emails[author_idx]
+        # Note: there may be too many authors (not all emails are scraped)
+        if author_idx < len(author_emails):
+            email = author_emails[author_idx]
 
         if args.email_lookup is True and email == '':
             print("No email found, skipping")
