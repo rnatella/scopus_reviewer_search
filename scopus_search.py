@@ -19,7 +19,8 @@ from email_scraper import scrape_emails
 
 import chromedriver_binary
 
-
+scopus_domain = "https://www.scopus.com/"
+#scopus_domain = "https://www-scopus-com.gssi.idm.oclc.org/"
 
 
 parser = argparse.ArgumentParser()
@@ -57,7 +58,7 @@ browser = None
 if args.email_lookup is True:
 
     opt = Options()
-    #opt.add_experimental_option("debuggerAddress", "localhost:8989")
+    opt.add_experimental_option("debuggerAddress", "localhost:8989")
     #opt.add_argument('--user-data-dir=./ChromeData')
     #opt.add_argument('--verbose')
     #opt.add_argument('--log-path=/Users/rnatella/git/scopus_reviewer_search/chromedriver.log')
@@ -216,7 +217,7 @@ for scopus_paper in scopus_results:
 
 
 
-    paper_link = 'https://www.scopus.com/record/display.uri?origin=resultslist&eid='+scopus_paper.eid
+    paper_link = scopus_domain+'/record/display.uri?origin=resultslist&eid='+scopus_paper.eid
 
 
     author_emails = []
